@@ -1,0 +1,32 @@
+; dnbridge.ini.example — copy to dnbridge.ini next to the executable and edit.
+; Sections and keys are case-insensitive. Comments start with ; or #
+
+[Config]
+; MANDATORY. TCP port for the DNC client connection. Valid range: 1–65535.
+TCP_Port = 1550
+
+; Log verbosity: 0=Trace 1=Debug 2=Info 3=Warning 4=Error 5=Fatal
+Log_Level = 2
+
+; Optional log file path. If omitted, logging goes to the WPF window only.
+; Log_File = C:/logs/dnbridge.log
+
+[Scada]
+; MANDATORY. At least one IEC 60870-5-104 server address.
+; Format: host:port (port defaults to 2404 if omitted).
+; Multiple addresses: semicolon-separated; engine rotates on failure.
+Addresses = 127.0.0.1:2404
+; Addresses = 192.168.1.100:2404; 192.168.1.101:2404
+
+; How the SCADA fills CP56Time2a time tags (which carry no time zone):
+;   1 = SCADA sends UTC (default) — bytes used as-is.
+;   0 = SCADA sends local time — converted local→UTC on receive.
+; A wrong setting shifts every timed value by the local UTC offset and breaks
+; GetData "newer than" filtering (DNC sees "no new data").
+; Production SCADA (cernovicke_terasy) sends UTC -> use 1.
+; The iec104servertest test server sends LOCAL time (DateTime.Now) -> use 0.
+TimeIsUtc = 1
+
+; Optional. Set to a folder to enable SCADA traffic logging (same format as the WPF
+; "SCADA Traffic" detail pane). One file per calendar date: scada_MMdd.log.
+; Scada_log = C:/data/dnbridge

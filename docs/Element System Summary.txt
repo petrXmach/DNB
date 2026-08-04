@@ -1,0 +1,153 @@
+  Element System Summary
+
+  Three Element Categories in DNBridge
+
+  ---
+  1. Monitor Elements (DncSession.MonitorElements)
+
+  What they are: SCADA telemetry — measured values from the power network (voltages, currents, switch states, power flows).
+
+  Registration: DNC sends RegisterElements with plain IDs (e.g. 959–988) and IsSetPoint=false, no Main104Flag. Stored in MonitorElements[schemaId] → Element104.
+
+  Data flow:
+  SCADA spontaneous ASDU → ElementCache.Find(address) → Element104.Value/Quality/LastDataTime updated
+  DNC polls GetData → CommandExecutor iterates MonitorElements cursor → delivers updated values
+
+  IEC 104 types received: M_SP_NA_1 (single point), M_DP_NA_1 (double point), M_ME_NC_1 (float), M_ME_NB_1 (scaled int), M_ST_NA_1 (step position), and their _TB_ timestamped variants.
+
+  Currently in C# DNBridge: Fully implemented. SCADA ASDU handler updates Element104, GetData delivers to DNC.
+
+  ---
+  2. Command / SetPoint Elements (DncSession.CommandElements)
+
+  What they are: Pure control outputs — DNC calculates grid regulation and sends setpoints/commands to SCADA equipment (capacitors, reactors, tap changers).
+
+  Registration: RegisterElements with IsSetPoint=true. Stored in CommandElements[schemaId] → Element104.
+
+  Data flow:
+  DNC sends Poke(elementId, value) → CommandExecutor looks up CommandElements
+  → ScadaClient.SendSetpointShort / SendSingleCommand / SendDoubleCommand → SCADA RTU
+
+  IEC 104 types sent: C_SE_NC_1 (float setpoint), C_SC_NA_1 (single command), C_DC_NA_1 (double command).
+
+  One-directional — no value received back from SCADA for these (SCADA sends ACT_CON confirmations but those are just logged, not forwarded).
+
+  ---
+  3. Main104Flag Elements (DncSession.CommandElements, flag 0xC0000000)
+
+  What they are: System-level regulation parameters. Bidirectional — DNC can set them and SCADA can also set them. Currently loaded from XChng.cfg (temporary workaround; in production
+  they come from DNC's RegisterElements).
+
+  Two functional sub-groups:
+
+  Sub-group A — Configurable input parameters (IDs 1–7, m_bInput=true in EVlivy3):
+  These are bidirectional regulation settings. SCADA can write them to DNC and DNC can write them to SCADA:
+
+  ┌─────────┬──────────────────┬──────────────────────────────────────────────────┐
+  │ Bare ID │       Name       │                     Meaning                      │
+  ├─────────┼──────────────────┼──────────────────────────────────────────────────┤
+  │ 1       │ ID_104_Active    │ Regulation on/off                                │
+  ├─────────┼──────────────────┼──────────────────────────────────────────────────┤
+  │ 2       │ ID_104_RegMode   │ Regulation mode (0–3)                            │
+  ├─────────┼──────────────────┼──────────────────────────────────────────────────┤
+  │ 3       │ ID_104_RegBranch │ Transformer tap regulation enabled               │
+  ├─────────┼──────────────────┼──────────────────────────────────────────────────┤
+  │ 4       │ ID_104_UNet_max  │ Max allowed voltage deviation (%)                │
+  ├─────────┼──────────────────┼──────────────────────────────────────────────────┤
+  │ 5       │ ID_104_UNet_min  │ Min allowed voltage deviation (%)                │
+  ├─────────┼──────────────────┼──────────────────────────────────────────────────┤
+  │ 6       │ ID_104_Qvvn      │ Reactive power setpoint at HV/MV boundary (MVAr) │
+  ├─────────┼──────────────────┼──────────────────────────────────────────────────┤
+  │ 7       │ ID_104_Q_tor     │ Reactive power tolerance (MVAr)                  │
+  └─────────┴──────────────────┴──────────────────────────────────────────────────┘
+
+  Persisted in <scheme>.d104.ini by EVlivy3. Sent to SCADA on reconnect.
+
+  Sub-group B — Calculation output results (IDs 101–106, m_bInput=false):
+  These are outputs from DNC's regulation algorithm, sent to SCADA each cycle:
+
+  ┌─────────┬───────────────────┬────────────────────────────────────────────┐
+  │ Bare ID │       Name        │                  Meaning                   │
+  ├─────────┼───────────────────┼────────────────────────────────────────────┤
+  │ 101     │ ID_104_Active_ACK │ Status acknowledgment (echo back to SCADA) │
+  ├─────────┼───────────────────┼────────────────────────────────────────────┤
+  │ 102     │ ID_104_State      │ Current regulation state                   │
+  ├─────────┼───────────────────┼────────────────────────────────────────────┤
+  │ 103     │ ID_104_Q_min      │ Q min limit                                │
+  ├─────────┼───────────────────┼────────────────────────────────────────────┤
+  │ 104     │ ID_104_Q_max      │ Q max limit                                │
+  ├─────────┼───────────────────┼────────────────────────────────────────────┤
+  │ 105     │ ID_104_Losses     │ Calculated losses                          │
+  ├─────────┼───────────────────┼────────────────────────────────────────────┤
+  │ 106     │ ID_104_Weak       │ Weak node indicator                        │
+  └─────────┴───────────────────┴────────────────────────────────────────────┘
+
+  Data flow (both sub-groups):
+  DNC Poke(0xC0000001...) → CommandElements lookup → ScadaClient.Send* → SCADA
+  SCADA spontaneous → ElementCache updated (value stored) [→ in original C++ immediately reverse-Poke'd to DNC via m_bPropagate=true]
+
+  Currently in C# DNBridge: Only DNC→SCADA direction (Poke) works. SCADA→DNC reverse Poke is not yet implemented — when SCADA sends a value update for these addresses, ElementCache is
+  updated but DNC is not notified immediately (would need dual-map registration to deliver via GetData).
+
+  ---
+  What's in ElementCache.All
+
+  The shared ElementCache holds all three types by IEC 104 address — it does not distinguish which session map they belong to. Each Element104 has:
+
+  ┌─────────────────────────┬──────────────────────────────────────┐
+  │        Property         │             Description              │
+  ├─────────────────────────┼──────────────────────────────────────┤
+  │ Address (ulong)         │ Encoded CA+IOA                       │
+  ├─────────────────────────┼──────────────────────────────────────┤
+  │ CA / IOA                │ Decoded address parts                │
+  ├─────────────────────────┼──────────────────────────────────────┤
+  │ Value (double)          │ Current value (all types normalized) │
+  ├─────────────────────────┼──────────────────────────────────────┤
+  │ Quality (uint)          │ IEC 104 quality bits                 │
+  ├─────────────────────────┼──────────────────────────────────────┤
+  │ LastDataTime (DateTime) │ When last updated                    │
+  ├─────────────────────────┼──────────────────────────────────────┤
+  │ Iec104Type (byte)       │ TypeID of last ASDU                  │
+  ├─────────────────────────┼──────────────────────────────────────┤
+  │ IsSetPoint (bool)       │ True for command/Main104 elements    │
+  └─────────────────────────┴──────────────────────────────────────┘
+
+  The DncSession maps (MonitorElements, CommandElements) use schema IDs (DNC's internal IDs) as keys, while ElementCache uses IEC 104 addresses.
+
+  ---
+  Summary Table
+
+  ┌──────────────────────────────────┬─────────────────┬───────────────┬───────────────────┬────────────────────────────────────────┐
+  │             Category             │   Session Map   │   Direction   │    Updated by     │            Delivered to DNC            │
+  ├──────────────────────────────────┼─────────────────┼───────────────┼───────────────────┼────────────────────────────────────────┤
+  │ Monitor elements                 │ MonitorElements │ SCADA→DNC     │ SCADA ASDU        │ GetData polling                        │
+  ├──────────────────────────────────┼─────────────────┼───────────────┼───────────────────┼────────────────────────────────────────┤
+  │ Setpoint/command                 │ CommandElements │ DNC→SCADA     │ DNC Poke          │ N/A (output only)                      │
+  ├──────────────────────────────────┼─────────────────┼───────────────┼───────────────────┼────────────────────────────────────────┤
+  │ Main104 input params (1–7)       │ CommandElements │ Bidirectional │ Poke + SCADA ASDU │ Reverse Poke (C++ only, not yet in C#) │
+  ├──────────────────────────────────┼─────────────────┼───────────────┼───────────────────┼────────────────────────────────────────┤
+  │ Main104 output results (101–106) │ CommandElements │ DNC→SCADA     │ DNC Poke          │ N/A (output only)                      │
+  └──────────────────────────────────┴─────────────────┴───────────────┴───────────────────┴────────────────────────────────────────┘
+
+  ---
+*******************************
+  Are all elements defined at app start?
+  No — ElementCache starts empty. Elements are only populated when DNC connects and sends RegisterElementsCommand. At that point:
+  - Monitor elements → from RegisterElements stubs with IsSetPoint=false, no Main104Flag
+  - Setpoint/command elements → from RegisterElements stubs with IsSetPoint=true
+  - Main104 elements → from XChng.cfg (loaded during RegisterElements processing in CommandExecutor)
+
+  After DNC disconnects, DncSession.Clear() wipes the schema-ID maps (MonitorElements, CommandElements), but ElementCache itself is not cleared — elements stay cached with their last
+  known values.
+
+  Current event flow (DNBridge core → WPF):
+  DnbEngine events (6 total):
+    LogMessage → append to LogTextBox
+    IsRunningChanged → checkbox
+    DncConnectionChanged → checkbox
+    ScadaConnectionChanged → checkbox
+    DncCommandReceived(name, details, tag, payload) → append text to DncTrafficTextBox
+    ScadaDataReceived(typeDescription, details) → append text to ScadaTrafficTextBox
+  All handlers use Dispatcher.BeginInvoke to hop to UI thread. Currently everything is text — no structured data reaches WPF. For element visualization we need new events carrying
+  structured element data.
+

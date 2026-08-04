@@ -1,0 +1,66 @@
+<Window x:Class="DNBridge.Wpf.CalcTestWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="an3f4w — Calc Engine Test" Height="760" Width="1100">
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>   <!-- 0: basic DLL probe -->
+            <RowDefinition Height="Auto"/>   <!-- 1: test selection header -->
+            <RowDefinition Height="Auto"/>   <!-- 2: per-kind test rows -->
+            <RowDefinition Height="Auto"/>   <!-- 3: run toolbar -->
+            <RowDefinition Height="*"/>      <!-- 4: log -->
+            <RowDefinition Height="Auto"/>   <!-- 5: status line -->
+        </Grid.RowDefinitions>
+
+        <!-- Basic DLL probe: anInitLibrary + anDLLVersion -->
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
+            <Button x:Name="SmokeTestButton" Content="Test an3f4w DLL" Width="130" Height="28"
+                    Click="SmokeTestButton_Click"
+                    ToolTip="Basic probe: load the engine, anInitLibrary, read anDLLVersion, anDoneLibrary."/>
+            <TextBlock x:Name="SmokeStatusText" Text="DLL: not tested" VerticalAlignment="Center"
+                       Margin="12,0,0,0" FontFamily="Consolas" Foreground="Gray"/>
+        </StackPanel>
+
+        <!-- Test selection header -->
+        <TextBlock Grid.Row="1" Text="Calculation tests — tick the ones to run, edit the input file if needed:"
+                   FontWeight="Bold" Margin="0,0,0,6"/>
+
+        <!-- Per-kind test rows (built in code-behind from An3f4wCalcTest.Catalog) -->
+        <Border Grid.Row="2" BorderBrush="#DDD" BorderThickness="1" Padding="8" Margin="0,0,0,8">
+            <StackPanel x:Name="TestListPanel"/>
+        </Border>
+
+        <!-- Run toolbar -->
+        <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,0,0,8">
+            <Button x:Name="RunButton" Content="RUN CALCULATIONS" Width="170" Height="30"
+                    FontWeight="Bold" Click="RunButton_Click"/>
+            <Button x:Name="SelectAllButton" Content="Select all" Width="80" Height="30"
+                    Margin="10,0,0,0" Click="SelectAllButton_Click"/>
+            <Button x:Name="ClearAllButton" Content="Clear all" Width="80" Height="30"
+                    Margin="6,0,0,0" Click="ClearAllButton_Click"/>
+            <CheckBox x:Name="CreateOutFilesCheck" Content="createOutFiles (+SetFileName)"
+                      VerticalAlignment="Center" Margin="20,0,0,0"
+                      ToolTip="Pass createOutFiles=1 to anRunAnalysis and set a temp output path. Writes .bin3/report files to %TEMP%."/>
+            <Button x:Name="ClearLogButton" Content="Clear log" Width="80" Height="30"
+                    Margin="20,0,0,0" Click="ClearLogButton_Click"/>
+        </StackPanel>
+
+        <!-- Combined process log (every native call → params → return, for all selected tests) -->
+        <DockPanel Grid.Row="4">
+            <TextBlock DockPanel.Dock="Top" Text="Process log (native call → params → return)"
+                       FontWeight="Bold" Margin="0,0,0,4"/>
+            <TextBox x:Name="LogBox" IsReadOnly="True"
+                     FontFamily="Consolas" FontSize="11"
+                     VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
+                     TextWrapping="NoWrap"/>
+        </DockPanel>
+
+        <!-- Status -->
+        <TextBlock x:Name="StatusText" Grid.Row="5" Margin="0,8,0,0"
+                   FontFamily="Consolas" Foreground="Gray"
+                   Text="Pick one or more tests, then RUN CALCULATIONS."/>
+    </Grid>
+</Window>
