@@ -23,14 +23,15 @@ IEC 60870-5-104 and **directly** to the an3f4w calculation DLL. There is no DNC,
 middleware, no `.egc3`, no SQLite.
 
 ```
-                        ┌───────────────────────── DNB ─────────────────────────┐
+                        ┌───────────────────── DNB engine ──────────────────────┐
    ┌───────┐  IEC104    │  SCADA buffer  ⇄  time slice  ⇄  calc cache  ⇄  DLL    │
    │ SCADA │ ◄────────► │   (104 addr)      (per tick)    (element id)  an3f4w   │
-   └───────┘            │        ▲                              ▲               │
-                        │        │                     schema (JSON, immutable)  │
-                        └────────┼──────────────────────────────┼───────────────┘
-                                 │                              │
-                          WPF shell / service            Angular editor (later)
+   └───────┘            │                                        ▲              │
+                        │                       schema (JSON, immutable)        │
+                        └───────────────────────────┬───────────────────────────┘
+                                                    │ IEngineClient
+                                        ┌───────────┴───────────┐
+                                   WPF shell            Web API (later) ──► Angular
 ```
 
 Two operating modes, sharing one calculation kernel:
@@ -59,9 +60,11 @@ These **amend** `migration_plan.md`; where they differ, this file wins until the
 | **N7** | **Development runs against a test SCADA server**, not production. | Production keeps running DNC/DNBridge untouched until one cutover. The test server must carry a realistic `ct_2026` point set. |
 | **N8** | **Two services, not one** — separate online and offline hosts. | §6. Recommended and adopted; rationale below. |
 | **N9** | **DNC/TLV is deleted from DNB**, not kept dormant. | The DNBridge repo remains as frozen reference. Reverses `DesiredState_Stage1.md` §11 *for DNB only*. |
+| **N10** | **The Web API server is a separate process.** The engine **listens**, the Web API **dials in**. **Loopback only**, exactly one online engine, no discovery or registry. | No mTLS, no certificate lifecycle. The Web API is the only user-facing surface; the engine endpoint is infrastructure and is never exposed. |
+| **N11** | **One client-facing interface, two transports.** WPF and the Web API are both written against **`IEngineClient`**; gRPC is a *transport* over it, not a second API. In-process implementation now, gRPC endpoint later. | §6. Subscriptions are `IAsyncEnumerable<EngineEvent>` — maps 1:1 onto gRPC server-streaming and works in-process unchanged. WPF can later attach to a running service by swapping the implementation. |
+| **N12** | **Restart on change.** A schema or config change ⇒ **full process restart**, SCADA connection included. No hot reload, no partial invalidation. The engine runs unsupervised and auto-restarts on crash. | Stale buffer entries after a changed address or replaced IOA become unrepresentable. Needs restart backoff (N-d). The pre-calc gate makes restart safe by construction — it withholds actuation until the GI has refilled the buffer and values are fresh. |
 
-Still open: process topology for the engine (in-proc vs. child process), and the online↔offline
-scheme handoff. See §7.
+Still open: engine process topology (in-proc vs. child process) and schema ownership. See §7.
 
 ---
 
@@ -236,7 +239,7 @@ Found by walking the requirements against the block map — these have **no `B` 
 | **N-a** | **Delete the DNC/TLV side** — `Tlv/`, `Commands/`, `DncServer/`, the DNC-facing parts of `Core/`, `XChng.cfg` loader (N9) | DNB, one pass, first |
 | **N-b** | **Multi-user layer** — login, sessions, per-user scheme storage, upload | offline service only |
 | **N-c** | **Concurrency for a singleton engine** — the DLL is process-global; N concurrent user calcs need a queue or a pool of engine host processes | offline service |
-| **N-d** | **Scheme hot-reload** — rebuild the schema-scoped state (`B5`/`B7`/`B18`) without dropping the SCADA connection | online service |
+| **N-d** | **Supervision & restart policy** — SCM auto-restart, crash-loop backoff with a reset window, load failure logged before the process exits (N12) | online service |
 | **N-e** | **Test SCADA server point set** — a realistic `ct_2026` configuration on the test server (N7) | dev infrastructure |
 
 ---
@@ -265,13 +268,24 @@ serialized lane for all calculation.
 The cost is low: everything worth sharing (`DNB.Model`, `DNB.Calc`, `DNB.Engine`) is already a
 library referenced by both. Only hosting is duplicated.
 
-### The three hosts
+### Topology
+
+```
+Angular ──HTTPS/SignalR──► DNB.WebApi ──gRPC/loopback──► ONLINE engine   (WPF | service)
+                            (no engine)  └──gRPC──────► OFFLINE engine  (job runner)
+```
+
+The Web API holds **no engine**. It owns auth, users, schema storage and the job queue, and is a
+client of one or both engines over `IEngineClient` (N10/N11).
+
+### The hosts
 
 | Host | Role | When |
 |---|---|---|
-| **`DNB.Wpf`** | Bring-up and operations shell — START/STOP, live element grids, SCADA traffic, log view, basic settings, "run cycle now". Same shape as today's WPF, minus everything DNC/TLV. | **first** — this is how the online path gets built and trusted |
-| **`DNB.ServiceOnline`** | Production. Owns the single SCADA slot, one scheme, the control loop, one engine. Headless. | after the loop is trusted |
-| **`DNB.ServiceOffline`** | Web API + multi-user + Angular's backend. No SCADA. Own engine capacity. | with the Angular editor |
+| **`DNB.Wpf`** | Bring-up and operations shell — START/STOP, live element grids, SCADA traffic, log view, basic settings, "run cycle now". Hosts the engine in-process now; can attach to a running service later without UI changes. | **first** — this is how the online path gets built and trusted |
+| **`DNB.ServiceOnline`** | Production online engine. Owns the single SCADA slot, one scheme, the control loop, one engine. Headless, unsupervised, auto-restarting. | after the loop is trusted |
+| **`DNB.WebApi`** | Separate process serving Angular for **both** modes: online state/control, offline schema editing and calc jobs. Auth, users, schema storage, job queue. | with the Angular editor |
+| **`DNB.ServiceOffline`** | Offline engine — DLL only, no SCADA, job runner. | with the Angular editor |
 
 `DNB.Wpf` and `DNB.ServiceOnline` run the same core, so moving between them is no core change.
 
@@ -282,7 +296,7 @@ library referenced by both. Only hosting is duplicated.
 | # | Question | Blocking? |
 |---|---|---|
 | **O1** | **Engine process topology** — in-process, or behind a child `EngineHost` process? Deferred by choice. The interface (`ICalcEngineRunner`) makes it a swap either way, provided N3's reentrancy is respected. | no — but decide before production |
-| **O2** | **Online ↔ offline scheme handoff.** When Angular saves a scheme the online service is running, what happens? Recommendation: an explicit **reload** operation (N-d), *not* a process restart — a restart drops the SCADA slot, a reload keeps the connection and rebuilds only the schema-scoped state. | no — needed when Angular lands |
+| **O2** | **Schema ownership** — Web API storage (pushes content to the engine), engine-owned (reads its own file), or both with a version stamp. The restart model (N12) and taking the schema as a *source* rather than a config path keep all three open. | no — needed when Angular lands |
 | **O3** | **Pre-calc gate design (`B11`)** — faithful port of the C++ hard-coded `mapFilter` priority table, vs. a redesign around a per-point `must_be_valid` operator flag plus an energisation check. Since `<scheme>.scada.json` is authored fresh, the flag is now cheap to carry. | at `B11` |
 | **O4** | **`anGetSystemLosses1f` on kind 21** returned `0+j0` in testing while per-branch `m_DeltaSabc` carried losses — the Loss telemetry getter is unconfirmed. | at `B23` |
 | **O5** | **PQ-split domain caching** — does domain construction depend on switch state? Decides whether `B18` is schema-scoped or per-cycle. | at `B18` |
@@ -317,6 +331,10 @@ inputs for `ct_2026` (`DNB/data/`), and the `ct_2026` scheme itself. The recorde
 4. **Author `<scheme>.scada.json`** (`B7`) — does not exist yet; needs a one-time export from
    `.db3` + `XChng.cfg`.
 5. **Topology and node numbering** (`B5`), then the emitters (`B12`–`B17`).
+
+**Standing constraint while building the shell:** WPF is written against `IEngineClient` and the
+state projections only — never against `IDnbEngine`, `Element104` or the event args directly (N11).
+Anything WPF shapes privately is something the Web API later cannot reuse.
 
 A natural first proof, needing no SCADA and no DLL: read `ct_2026.json` plus a recorded snapshot and
 generate one engine input **byte-identical** to the recorded one. It exercises the model, the graph,
