@@ -22,7 +22,17 @@ and the target architecture disagree; the target always wins.
 
 **▶ Read [`docs/DNB_overview.md`](docs/DNB_overview.md) first for any work in this repo.** It owns the
 architecture: the two stores (SCADA buffer ⇄ calc cache), the per-tick cycle, the assembly layout,
-decisions **N1–N12**, open questions **O1–O9**, and the ordered first tasks.
+decisions **N1–N12** and open questions **O1–O9**.
+
+### This repo's own documents
+
+| Doc | Contents | Lifecycle |
+|---|---|---|
+| **[`docs/DNB_overview.md`](docs/DNB_overview.md)** | Architecture and the *why* — the cycle, assemblies, decisions `N*`, open questions `O*` | stable; edit in place |
+| **[`docs/DevState.md`](docs/DevState.md)** | **Where the work is and what's next** — block-by-block status, solution state | **live — update after every implementation change** |
+| [`docs/documentation-guide.md`](docs/documentation-guide.md) | Which file a new fact belongs in, and the rules for all of them | stable |
+| `docs/design/<topic>.md` | One per subsystem — **born as a plan, ends as the record** of what was built | live while its subsystem is built |
+| `docs/coding-standards.md` | C# / TypeScript / Angular conventions | *not written yet* — see §8 |
 
 ---
 
@@ -38,8 +48,9 @@ All three sit side-by-side under `C:\_EGC`; **use repo-relative links** (`../DNC
 
 **Where does a new fact go?** About the **C++ original or the port plan** → `../DNC`. About **the
 .NET system we are building** → here. **Never copy** C++ analysis into this repo — link to it.
-Full rules: [`../DNBridge/docs/documentation-guide.md`](../DNBridge/docs/documentation-guide.md)
-(canonical for all three repos; a DNB-local copy is pending).
+DNB-local rules and the level-by-level decision table:
+[`docs/documentation-guide.md`](docs/documentation-guide.md). Cross-repo rules are canonical in
+[`../DNBridge/docs/documentation-guide.md`](../DNBridge/docs/documentation-guide.md).
 
 ---
 

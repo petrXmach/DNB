@@ -9,9 +9,9 @@
 > [`../../DNC/Doc/App_migration/AI/overview/migration_plan.md`](../../DNC/Doc/App_migration/AI/overview/migration_plan.md).
 > This file references its `D`/`B` identifiers and never re-states them.
 >
-> ⚠ **The rest of `DNB/docs/` is inherited from the DNBridge fork and is largely stale for DNB**
-> (`architecture.md`, `DesiredState_Stage1.md`, `DevState.md` describe the DNC-connected bridge).
-> Cleaning that up is a task in §8.
+> **This file is stable** — architecture and decisions, edited in place when a decision changes.
+> Live status lives in [`DevState.md`](DevState.md), which **supersedes §8** below. Where each kind of
+> knowledge belongs: [`documentation-guide.md`](documentation-guide.md).
 
 ---
 
