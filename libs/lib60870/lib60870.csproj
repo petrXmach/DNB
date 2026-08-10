@@ -8,7 +8,7 @@
     <RootNamespace>lib60870</RootNamespace>
     <AssemblyName>lib60870</AssemblyName>
     <ReleaseVersion>2.3.0</ReleaseVersion>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
     <PackageIcon>icon.png</PackageIcon>
     <Description>
@@ -19,6 +19,15 @@
     <PackageOutputPath>nupkg</PackageOutputPath>
     <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
     <PackageLicenseExpression>GPL-3.0-only</PackageLicenseExpression>
+    <!-- DNB-local: silence two obsoletions surfaced by the net8 -> net10 retarget. Both are
+         in TLS code paths DNB never enters (the SCADA link is plain TCP; N10 rules out mTLS),
+         so the .cs sources stay byte-identical to upstream and remain diffable.
+           SYSLIB0057  new X509Certificate2(byte[])  - Connection.cs:1830, ClientConnection.cs:1636
+                       fix if TLS is ever enabled: X509CertificateLoader.LoadCertificate(...)
+           SYSLIB0014  ServicePointManager          - Connection.cs:1898
+                       WARNING: that line is already a no-op - SslStream does not read it.
+                       Do not trust it to be pinning TLS versions. -->
+    <NoWarn>$(NoWarn);SYSLIB0057;SYSLIB0014</NoWarn>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="ASDUQueue.cs" />
@@ -87,7 +96,7 @@
     <Compile Include="CS104\ClientConnection.cs" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="System.IO.Ports" Version="8.0.0" />
+    <PackageReference Include="System.IO.Ports" Version="10.0.0" />
     <None Include="images\icon.png" Pack="true" PackagePath="\" />
     <None Include="readme.md" Pack="true" PackagePath="\" />
   </ItemGroup>

@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- SCADA master client + the SCADA buffer (keyed by 104 address, both directions).
+       Connect / STARTDT / GI, supervisor reconnect with address rotation, control sends.
+       Must NOT reference DNB.Model: the buffer is keyed by 104 address only and knows
+       nothing of element ids — that binding lives in DNB.Online. -->
+
+  <ItemGroup>
+    <ProjectReference Include="..\DNB.Iec104\DNB.Iec104.csproj" />
+  </ItemGroup>
+
+</Project>

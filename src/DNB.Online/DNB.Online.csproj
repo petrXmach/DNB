@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The online control loop: 104<->element binding, per-tick time slice, pre-calc gate,
+       cycle orchestration, dispatch, snapshots. A library rather than an executable so
+       that DNB.Wpf now and DNB.ServiceOnline later run the identical loop. -->
+
+  <ItemGroup>
+    <ProjectReference Include="..\DNB.Model\DNB.Model.csproj" />
+    <ProjectReference Include="..\DNB.Calc\DNB.Calc.csproj" />
+    <ProjectReference Include="..\DNB.Scada\DNB.Scada.csproj" />
+    <ProjectReference Include="..\DNB.Engine\DNB.Engine.csproj" />
+  </ItemGroup>
+
+</Project>

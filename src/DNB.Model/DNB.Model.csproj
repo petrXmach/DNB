@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The schema document: element classes, scheme, geometry, connections, calc cache.
+       REFERENCES NOTHING, DELIBERATELY. Live SCADA values and the calculation engine
+       cannot leak onto the schema document if the model cannot see them — the compiler
+       enforces DNB_overview.md invariant 1 rather than discipline (N6 / D26).
+       Do not add a ProjectReference here. -->
+
+</Project>

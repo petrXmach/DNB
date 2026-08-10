@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The shared calculation kernel: schema reader, topology & node ordinals, value
+       derivation, row emission, document assembly, PQ split, stage chain.
+
+       SCADA-FREE ON PURPOSE — this is exactly what the offline service reuses. The one
+       expensive-to-undo mistake is letting the emitters or the decoder acquire a
+       dependency on the cycle, the gate, or SCADA; that is avoided for free by not
+       adding the reference. Do not reference DNB.Scada or DNB.Online. -->
+
+  <ItemGroup>
+    <ProjectReference Include="..\DNB.Model\DNB.Model.csproj" />
+    <ProjectReference Include="..\DNB.Calc\DNB.Calc.csproj" />
+  </ItemGroup>
+
+</Project>

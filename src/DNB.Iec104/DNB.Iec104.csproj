@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- IEC 60870-5-104 wrapper shared by the master client (DNB.Scada) and the SCADA
+       simulator's slave. Value codec (TypeID <-> double/quality/time, both directions),
+       address packing, CP56 time policy, COT mapping. Knows nothing about schemes,
+       elements or cycles, so an external simulator solution can reference it directly. -->
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\libs\lib60870\lib60870.csproj" />
+  </ItemGroup>
+
+</Project>

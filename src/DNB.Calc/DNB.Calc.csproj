@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- an3f4w P/Invoke, engine runner, result decode. References nothing.
+
+       an3f4w.dll is x64-only (Delphi engine); force a 64-bit process in any host.
+       PlatformTarget (not Platforms) is the real switch — keeping the project on the
+       solution's "Any CPU" platform avoids a config mismatch in DNB.slnx. -->
+
+  <PropertyGroup>
+    <PlatformTarget>x64</PlatformTarget>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <!-- Native engine + its Borland memory-manager dependency go in Native\, alongside the
+       interop code that loads them. borlndmm.dll MUST be loadable (the engine allocates
+       returned strings from its heap). TargetPath puts them at the output ROOT (next to
+       the exe) — the loader resolves both from AppContext.BaseDirectory. These flow to
+       the output of every referencing host, so the published folder is self-contained.
+       Windows-only artifacts: copied only on Windows builds.
+       Re-enable when Native\ is copied over from ../DNBridge/src/DNBridge.Calc.
+  <ItemGroup Condition="$([MSBuild]::IsOSPlatform('Windows'))">
+    <None Include="Native\an3f4w.dll">
+      <TargetPath>an3f4w.dll</TargetPath>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Native\borlndmm.dll">
+      <TargetPath>borlndmm.dll</TargetPath>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+  -->
+
+</Project>

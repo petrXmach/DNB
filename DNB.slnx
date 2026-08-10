@@ -1,0 +1,14 @@
+<Solution>
+  <Folder Name="/libs/">
+    <Project Path="libs/lib60870/lib60870.csproj" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/DNB.Calc/DNB.Calc.csproj" />
+    <Project Path="src/DNB.Engine/DNB.Engine.csproj" />
+    <Project Path="src/DNB.Iec104/DNB.Iec104.csproj" />
+    <Project Path="src/DNB.Model/DNB.Model.csproj" />
+    <Project Path="src/DNB.Online/DNB.Online.csproj" />
+    <Project Path="src/DNB.Scada/DNB.Scada.csproj" />
+    <Project Path="src/DNB.Wpf/DNB.Wpf.csproj" />
+  </Folder>
+</Solution>

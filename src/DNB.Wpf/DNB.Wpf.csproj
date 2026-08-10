@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Bring-up and operations shell: START/STOP, live element grids, SCADA traffic, log
+       view, "run cycle now". Hosts the engine in-process for now; can attach to a running
+       service later without UI changes.
+
+       Written against IEngineClient and the state projections only — never against the
+       engine internals or the event args directly (N11). Anything WPF shapes privately is
+       something the Web API later cannot reuse.
+
+       x64 because the host process loads the x64-only an3f4w.dll via DNB.Calc. -->
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <PlatformTarget>x64</PlatformTarget>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\DNB.Online\DNB.Online.csproj" />
+  </ItemGroup>
+
+</Project>
