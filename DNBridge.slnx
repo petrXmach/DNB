@@ -1,8 +1,5 @@
 <Solution>
-  <Folder Name="/docs/">
-    <File Path="CLAUDE.md" />
-    <File Path="docs/DevState.md" />
-  </Folder>
+  <Folder Name="/docs/" />
   <Folder Name="/Solution Items/" />
   <Folder Name="/libs/">
     <Project Path="libs/lib60870/lib60870.csproj" />

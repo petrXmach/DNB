@@ -1,8 +1,0 @@
-I am starting a complete migration of DNC c++ code into DNB c# code. There where another parts of system migrated already, there is lots od docs, many of it stale, so here is brief description of original, current and final state:
-Original state:
-There were 2 apps: 
-DNCoRS:
- - this is extended/online version of DNCalc, that communicate with SCADA, gets measured data and returns grid optimalization. In doc is sometimes called DNC
- - it has drawing engine (c++ and wxWidgets) for drawing electrical grid schema, edit it, input different data for grid elements (load, line, transformer, ...)
- - schema is stored in egc3 files in custom TLV format
- - it uses bodors dll library for cal
