@@ -30,6 +30,7 @@ decisions **N1–N12** and open questions **O1–O9**.
 |---|---|---|
 | **[`docs/DNB_overview.md`](docs/DNB_overview.md)** | Architecture and the *why* — the cycle, assemblies, decisions `N*`, open questions `O*` | stable; edit in place |
 | **[`docs/DevState.md`](docs/DevState.md)** | **Where the work is and what's next** — block-by-block status, solution state | **live — update after every implementation change** |
+| **[`docs/problems_to_be_solved.md`](docs/problems_to_be_solved.md)** | **Punch list `P1`–`P10`** — structural mistakes in the skeleton and defects in the code queued for porting. **Read before touching the reference graph, the codec or the buffer.** | transitional — items leave as they are resolved; delete when empty |
 | [`docs/documentation-guide.md`](docs/documentation-guide.md) | Which file a new fact belongs in, and the rules for all of them | stable |
 | `docs/design/<topic>.md` | One per subsystem — **born as a plan, ends as the record** of what was built | live while its subsystem is built |
 | `docs/coding-standards.md` | C# / TypeScript / Angular conventions | *not written yet* — see §8 |
