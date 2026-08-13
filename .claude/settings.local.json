@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/_EGC/DNBridge/**)",
+      "Read(//c/_EGC/DNC/Doc/App_migration/AI/**)",
+      "Read(//c/_EGC/DNC/Doc//**)",
+      "Read(//c/_EGC/DNC//**)",
+      "Bash(grep -n \"^#\\\\{2,3\\\\} \" migration_plan.md)",
+      "Read(//c/_EGC/lib60870.NET//**)",
+      "Read(//c/_EGC/lib60870.NET/**)",
+      "Bash(xargs wc -l)"
+    ]
+  }
+}
